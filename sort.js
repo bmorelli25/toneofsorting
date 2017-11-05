@@ -1,215 +1,186 @@
-function test(array, i, j) {
-  self.postMessage(['test', i, j]);
+let queue = null;
+let worker = null;
 
-  return array[i] - array[j];
+if (typeof AudioContext == 'undefined') {
+  AudioContext = webkitAudioContext;
 }
 
-function swap(array, i, j) {
-  self.postMessage(['swap', i, j]);
+const audio = new AudioContext();
 
-  var temp = array[i];
-  array[i] = array[j];
-  array[j] = temp;
-}
+const master = audio.createGain();
+master.gain.setValueAtTime(0.20, audio.currentTime);
+master.connect(audio.destination);
 
-function bubbleSort(a) {
-  var n = a.length;
-  for (var i = 0; i < n; i++) {
-    for (var j = 0; j < n - i - 1; j++) {
-      if (test(a, j + 1, j) < 0) {
-        swap(a, j, j + 1);
-      }
-    }
-  }
-}
-
-
-function cocktailSort(a) {
-  var n = a.length;
-  var left = 0;
-  var right = n - 1;
-  while (left < right) {
-    var new_right = right - 1;
-    for (var i = left; i + 1 <= right; i++) {
-      if (test(a, i + 1, i) < 0) {
-        swap(a, i + 1, i);
-        new_right = i;
-      }
-    }
-    right = new_right;
-    var new_left = left + 1;
-    for (var i = right; i - 1 >= left; i--)  {
-      if (test(a, i, i - 1) < 0) {
-        swap(a, i, i - 1);
-        new_left = i;
-      }
-    }
-    left = new_left;
-  }
-}
-
-function combSort(a) {
-  var shrink = 1.3;
-
-  var swapped = false;
-  var gap = a.length;
-
-  while ((gap > 1) || swapped)
-  {
-    if (gap > 1) {
-      gap = Math.floor(gap / shrink);
-    }
-
-    swapped = false;
-
-    for (var i = 0; gap + i < a.length; ++i) {
-      if (test(a, i, i + gap) > 0) {
-	swap(a, i, i + gap);
-	swapped = true;
-      }
-    }
-  }
-}
-
-function gnomeSort(a) {
-  var n = a.length;
-  for (var i = 1; i < n; true) {
-    if (test(a, i, i - 1) >= 0) {
-      ++i;
-    } else {
-      swap(a, i, i - 1);
-      if (i > 1) {
-	--i;
-      }
-    }
-  }
-}
-
-function heapSort(a) {
-  var n = a.length;
-  var i = Math.floor(n / 2);
-
-  while (true) {
-    if (i > 0) {
-      i--;
-    } else {
-      n--;
-      if (n == 0) return;
-      swap(a, 0, n);
-    }
-
-    var parent = i;
-    var child = i * 2 + 1;
-
-    while (child < n) {
-      if (child + 1 < n && test(a, child + 1, child) > 0) {
-	child++;
-      }
-
-      if (test(a, child, parent) > 0) {
-	swap(a, parent, child);
-	parent = child;
-	child = parent*2+1;
-      }
-      else {
-	break;
-      }
-    }
-  }
-}
-
-function insertionSort(a) {
-  var n = a.length;
-  for (var i = 1; i < n; i++) {
-    for (var j = i; j > 0 && test(a, j, j - 1) < 0; j--) {
-      swap(a, j, j - 1);
-    }
-  }
-}
-
-function oddEvenSort(a) {
-  var n = a.length;
-  var sorted = false;
-  while (!sorted) {
-    sorted = true;
-    for (var p = 0; p <= 1; p++) {
-      for (var i = p; i + 1 < n; i += 2) {
-        if (test(a, i + 1, i) < 0) {
-          swap(a, i + 1, i);
-          sorted = false;
-        }
-      }
-    }
-  }
-}
-
-function selectionSort(a) {
-  var n = a.length;
-  for (var i = 0; i < n - 1; i++) {
-    var k = i;
-    for (var j = i; j < n; j++) {
-      if (test(a, j, k) < 0) {
-        k = j;
-      }
-    }
-
-    swap(a, i, k);
-  }
-}
-
-function pivot(aa, type, left, right) {
-  if (typeof(left) === 'undefined') left = 0;
-  if (typeof(right) === 'undefined') right = aa.length() - 1;
-  var p = null;
-  if (type === 'random') {
-    var p = left + Math.floor((right - left + 1) * Math.random());
-  } else if (type === 'first') {
-    p = left;
-  } else if (type === 'last') {
-    p = right;
-  } else if (type === 'middle') {
-    p = Math.round((left + right) / 2);
-  } else {
-    throw new TypeError('Invalid p type ' + type);
-  }
-
-  return p;
-}
-
-function partition(aa, type, left, right) {
-  var p = pivot(aa, type, left, right);
-  swap(aa, p, right);
-
-  p = left;
-  for (var i = left; i < right; i++) {
-    if (test(aa, i, right) < 0) {
-      if (i != p) {
-        swap(aa, i, p);
-      }
-      p += 1
-    }
-  }
-
-  swap(aa, right, p);
-
-  return p;
-}
-
-function quickSort(aa, type, left, right) {
-  var n = aa.length;
-  if (typeof(left) === 'undefined') left = 0;
-  if (typeof(right) === 'undefined') right = n - 1;
-
-  if (left >= right) return;
-
-  var p = partition(aa, type, left, right);
-  quickSort(aa, type, left, p - 1);
-  quickSort(aa, type, p + 1, right);
-}
-
-self.onmessage = function(event) {
-  var sort = eval(event.data[0]);
-  sort(event.data[1], event.data[2]);
-
-  console.log(event.data[1]);
+const volume = document.querySelector('#volume');
+volume.onchange = function() {
+  master.gain.setValueAtTime(Number(this.value) / 100, audio.currentTime);
 };
+
+const track = audio.createGain();
+track.gain.setValueAtTime(0, audio.currentTime);
+track.connect(master);
+
+const tone = audio.createOscillator();
+
+tone.type = 'triangle';
+tone.frequency.value = 440;
+tone.connect(track);
+tone.start();
+
+const algorithm = document.querySelector('#algorithm');
+algorithm.onchange = function() {
+  if (algorithm.value == 'quickSort') {
+    pivot.disabled = false;
+  } else {
+    pivot.disabled = true;
+  }
+};
+
+const pivot = document.querySelector('#pivot');
+pivot.disabled = true;
+
+const sort = document.querySelector('#sort');
+sort.onclick = function click(event) {
+  if (worker) {
+    worker.terminate();
+  }
+
+  queue = new Array();
+  worker = new Worker('algorithms.js');
+  worker.onmessage = function message(event) {
+    queue.push(event);
+  };
+
+  const algorithm = document.querySelector('#algorithm');
+  const pivot = document.querySelector('#pivot');
+  const shuffle = document.querySelector('#shuffle');
+  const size = document.querySelector('#size');
+
+  let length = Number(size.value);
+  let array = new Array(length);
+  for (var i = 0; i < array.length; i++) {
+    array[i] = i + 1;
+  }
+
+  array.sort(function(a, b) {
+    switch (shuffle.value) {
+      case 'random':
+        return Math.random() > 0.5 ? -1 : 1;
+      case 'ascending':
+        return a - b;
+      case 'descending':
+        return b - a;
+    }
+  });
+
+  const visualization = document.querySelector('#visualization');
+  visualization.innerHTML = '';
+
+  for (var i = 0; i < array.length; i++) {
+    let element = document.createElement('span');
+
+    let value = array[i];
+    element.dataset.value = value;
+
+    let percent = (value / array.length) * 100;
+
+    if (array.length <= 10) {
+      element.className = 'ball';
+      element.innerText = array[i];
+    } else {
+      element.className = 'bar';
+      element.style.height = percent + '%';
+    }
+
+    if (array.length >= 100) {
+      element.style.backgroundColor = 'hsl(' + ((percent / 100) * 360) + ', 85%, 60%)';
+    }
+
+    visualization.appendChild(element);
+  }
+
+  worker.postMessage([algorithm.value, array, pivot.value]);
+};
+
+let then = performance.now();
+window.requestAnimationFrame(function tick(now) {
+
+  const container = document.querySelector('#visualization');
+  const elements = container.querySelectorAll('span');
+
+  let delay = Number(document.querySelector('#delay').value);
+
+  for (var i = 0; i < elements.length; i++) {
+    if (elements[i].style.translate != '0px') {
+      elements[i].style.transition = 'all ' + (delay / 1000) + 's';
+      elements[i].style.transform = 'translate(0px)';
+      //elements[i].style.translate = '0px';
+    }
+  }
+
+  if (now - then > delay) {
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].classList.remove('test');
+      elements[i].classList.remove('swap');
+    }
+
+    let event = (queue || []).shift();
+    if (event) {
+      let element1 = elements[event.data[1]];
+      let element2 = elements[event.data[2]];
+
+      let value1 = Number(element1.dataset.value);
+      let value2 = Number(element2.dataset.value);
+
+      let distance = Math.floor(element1.offsetLeft - element2.offsetLeft);
+
+      if (event.data[0] == 'test') {
+        element1.classList.add('test');
+        element2.classList.add('test');
+
+        let factor = ((value1 / elements.length) + (value2 / elements.length) / 2);
+        let frequency = 440 + (factor * 440);
+
+        tone.frequency.linearRampToValueAtTime(frequency, audio.currentTime);
+
+        track.gain.cancelScheduledValues(audio.currentTime);
+        track.gain.linearRampToValueAtTime(0.75, audio.currentTime);
+        track.gain.linearRampToValueAtTime(0, audio.currentTime + delay);
+      }
+
+      if (event.data[0] == 'swap') {
+        let factor = ((value1 / elements.length) + (value2 / elements.length) / 2);
+        let frequency = 440 - (factor * 440);
+
+        tone.frequency.linearRampToValueAtTime(frequency, audio.currentTime);
+
+        track.gain.cancelScheduledValues(audio.currentTime);
+        track.gain.linearRampToValueAtTime(1, audio.currentTime);
+        track.gain.linearRampToValueAtTime(0, audio.currentTime + delay);
+
+        let temp = document.createElement('span');
+        element1.parentNode.insertBefore(temp, element1);
+        element1.classList.add('swap');
+
+        element2.parentNode.insertBefore(element1, element2);
+        element2.classList.add('swap');
+
+        temp.parentNode.insertBefore(element2, temp);
+        temp.parentNode.removeChild(temp);
+
+        element1.style.transition = '';
+        element1.style.transform = 'translate(' + (distance * 1) + 'px)';
+
+        element2.style.transition = '';
+        element2.style.transform = 'translate(' + (distance * -1) + 'px)';
+      }
+    } else {
+      track.gain.cancelScheduledValues(0);
+      track.gain.linearRampToValueAtTime(0, audio.currentTime);
+    }
+
+    then = now;
+  }
+
+  window.requestAnimationFrame(tick);
+});
